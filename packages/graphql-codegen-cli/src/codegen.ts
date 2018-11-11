@@ -1,5 +1,6 @@
 import { FileOutput, GraphQLSchema, DocumentFile, Types, CodegenPlugin } from 'graphql-codegen-core';
-import { mergeSchemas as remoteMergeSchemas, makeExecutableSchema } from 'graphql-tools';
+import { extendSchema, parse } from 'graphql';
+import { mergeSchemas as remoteMergeSchemas } from 'graphql-tools';
 import * as Listr from 'listr';
 import { normalizeOutputParam, normalizeInstanceOrArray, normalizeConfig } from './helpers';
 import { IntrospectionFromUrlLoader } from './loaders/schema/introspection-from-url';
@@ -334,19 +335,10 @@ export async function executePlugin(options: ExecutePluginOptions): Promise<stri
 
   const schema = !pluginPackage.addToSchema
     ? options.schema
-    : await mergeSchemas([
+    : await extendSchema(
         options.schema,
-        makeExecutableSchema({
-          typeDefs: pluginPackage.addToSchema,
-          allowUndefinedInResolve: true,
-          resolverValidationOptions: {
-            requireResolversForResolveType: false,
-            requireResolversForAllFields: false,
-            requireResolversForNonScalar: false,
-            requireResolversForArgs: false
-          }
-        })
-      ]);
+        typeof pluginPackage.addToSchema === 'string' ? parse(pluginPackage.addToSchema) : pluginPackage.addToSchema
+      );
 
   if (pluginPackage.validate && typeof pluginPackage.validate === 'function') {
     try {
